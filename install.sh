@@ -146,7 +146,7 @@ install_x-ui() {
 
     tar zxvf x-ui-linux-$(arch3xui).tar.gz
     rm x-ui-linux-$(arch3xui).tar.gz -f
-    mv -rf x-ui/ "$name-x-ui/"
+    mv -f x-ui/ "$name-x-ui/"
     cd x-ui
     chmod +x x-ui bin/xray-linux-$(arch3xui)
     wget --no-check-certificate -O /etc/systemd/system/$name-x-ui.service https://raw.githubusercontent.com/rezvanniazi/3x-ui/main/x-ui.service
