@@ -1,5 +1,5 @@
 #!/bin/bash
-
+name=$1
 red='\033[0;31m'
 green='\033[0;32m'
 yellow='\033[0;33m'
@@ -9,6 +9,7 @@ cur_dir=$(pwd)
 
 # check root
 [[ $EUID -ne 0 ]] && echo -e "${red}Fatal error: ${plain} Please run this script with root privilege \n " && exit 1
+export XUI_DB_FOLDER=/etc/$name-x-ui
 
 # Check OS and set release variable
 if [[ -f /etc/os-release ]]; then
@@ -90,6 +91,7 @@ config_after_install() {
     echo -e "${yellow}Install/update finished! For security it's recommended to modify panel settings ${plain}"
     read -p "Do you want to continue with the modification [y/n]?": config_confirm
     if [[ "${config_confirm}" == "y" || "${config_confirm}" == "Y" ]]; then
+        
         read -p "Please set up your username:" config_account
         echo -e "${yellow}Your username will be:${config_account}${plain}"
         read -p "Please set up your password:" config_password
@@ -122,9 +124,8 @@ config_after_install() {
 
 install_x-ui() {
     cd /usr/local/
-
-    if [ $# == 0 ]; then
-        last_version=$(curl -Ls "https://api.github.com/repos/MHSanaei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    name=$1
+    last_version=$(curl -Ls "https://api.github.com/repos/MHSanaei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
         if [[ ! -n "$last_version" ]]; then
             echo -e "${red}Failed to fetch x-ui version, it maybe due to Github API restrictions, please try it later${plain}"
             exit 1
@@ -135,30 +136,24 @@ install_x-ui() {
             echo -e "${red}Downloading x-ui failed, please be sure that your server can access Github ${plain}"
             exit 1
         fi
-    else
-        last_version=$1
-        url="https://github.com/MHSanaei/3x-ui/releases/download/${last_version}/x-ui-linux-$(arch3xui).tar.gz"
-        echo -e "Begining to install x-ui $1"
-        wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch3xui).tar.gz ${url}
-        if [[ $? -ne 0 ]]; then
-            echo -e "${red}Download x-ui $1 failed,please check the version exists ${plain}"
-            exit 1
-        fi
-    fi
+    
+    
 
-    if [[ -e /usr/local/x-ui/ ]]; then
-        systemctl stop x-ui
-        rm /usr/local/x-ui/ -rf
+    if [[ -e /usr/local/$name-x-ui/ ]]; then
+        systemctl stop $name-x-ui
+        rm /usr/local/$name-x-ui/ -rf
     fi
 
     tar zxvf x-ui-linux-$(arch3xui).tar.gz
     rm x-ui-linux-$(arch3xui).tar.gz -f
+    mv -rf x-ui/ "$name-x-ui/"
     cd x-ui
     chmod +x x-ui bin/xray-linux-$(arch3xui)
-    cp -f x-ui.service /etc/systemd/system/
-    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/MHSanaei/3x-ui/main/x-ui.sh
-    chmod +x /usr/local/x-ui/x-ui.sh
-    chmod +x /usr/bin/x-ui
+    wget --no-check-certificate -O /etc/systemd/system/$name-x-ui.service https://raw.githubusercontent.com/rezvanniazi/3x-ui/main/x-ui.service
+    wget --no-check-certificate -O /usr/bin/$name-x-ui https://raw.githubusercontent.com/rezvanniazi/3x-ui/main/x-ui.sh
+    sed -i s/ddname/$name/g /etc/systemd/system/$name-x-ui.service
+    chmod +x /usr/local/$name-x-ui/x-ui.sh
+    chmod +x /usr/bin/$name-x-ui
     config_after_install
     #echo -e "If it is a new installation, the default web port is ${green}2053${plain}, The username and password are ${green}admin${plain} by default"
     #echo -e "Please make sure that this port is not occupied by other procedures,${yellow} And make sure that port 2053 has been released${plain}"
